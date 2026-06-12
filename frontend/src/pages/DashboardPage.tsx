@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Building2, Camera, MapPin, BookOpen, Shield, TrendingUp,
-  ArrowRight, DollarSign, CheckCircle, BarChart3,
+  ArrowRight, DollarSign, CheckCircle, BarChart3, Plus, X,
 } from 'lucide-react';
 import MetricCard from '../components/MetricCard';
 import GlassCard from '../components/GlassCard';
 import { api } from '../services/api';
+import { useApp } from '../store/appStore';
 
 interface DashboardData {
   projects: { total: number; active: number; completed: number; planning: number };
@@ -27,14 +28,62 @@ interface DashboardData {
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showAddProject, setShowAddProject] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [addError, setAddError] = useState('');
   const navigate = useNavigate();
+  const { state: appState, dispatch } = useApp();
 
-  useEffect(() => {
+  const [projectForm, setProjectForm] = useState({
+    name: '', description: '', surveyNumber: '', contractor: '', engineer: '',
+    address: '', lat: '', lng: '', status: 'planning' as const,
+    totalBudget: '', startDate: '', expectedCompletion: '',
+  });
+
+  const loadDashboard = () => {
     api.getDashboardStats()
       .then(setData)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { loadDashboard(); }, []);
+
+  const handleAddProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddError('');
+    if (!projectForm.name || !projectForm.surveyNumber || !projectForm.contractor || !projectForm.engineer) {
+      setAddError('Name, Survey Number, Contractor, and Engineer are required');
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.createProject({
+        name: projectForm.name,
+        description: projectForm.description || `${projectForm.name} project`,
+        surveyNumber: projectForm.surveyNumber,
+        location: {
+          lat: parseFloat(projectForm.lat) || 12.9716,
+          lng: parseFloat(projectForm.lng) || 77.5946,
+          address: projectForm.address || 'India',
+        },
+        contractor: projectForm.contractor,
+        engineer: projectForm.engineer,
+        status: projectForm.status,
+        totalBudget: parseFloat(projectForm.totalBudget) || 5000000,
+        startDate: projectForm.startDate || new Date().toISOString(),
+        expectedCompletion: projectForm.expectedCompletion || new Date(Date.now() + 365 * 86400000).toISOString(),
+      });
+      setShowAddProject(false);
+      setProjectForm({ name: '', description: '', surveyNumber: '', contractor: '', engineer: '', address: '', lat: '', lng: '', status: 'planning', totalBudget: '', startDate: '', expectedCompletion: '' });
+      setLoading(true);
+      loadDashboard();
+    } catch (err: any) {
+      setAddError(err.message || 'Failed to create project');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const formatCurrency = (v: number) => {
     if (v >= 10000000) return '₹' + (v / 10000000).toFixed(1) + ' Cr';
@@ -83,6 +132,15 @@ export default function DashboardPage() {
 
   return (
     <div className="flex-col">
+      {/* Header with Add Project */}
+      <div className="section-header">
+        <div />
+        {appState.user?.role === 'Admin' && (
+          <button className="btn btn-primary" onClick={() => { setShowAddProject(true); setAddError(''); }}>
+            <Plus size={18} /> New Project
+          </button>
+        )}
+      </div>
       {/* Metric Cards */}
       <div className="grid-4">
         <MetricCard
@@ -140,7 +198,18 @@ export default function DashboardPage() {
         <GlassCard title="Projects" subtitle={`${data.projects.total} total`} icon={Building2} iconColor="blue">
           <div className="flex-col" style={{ gap: 'var(--space-md)' }}>
             {data.projectSummaries.map((p) => (
-              <div key={p.id} className="project-card glass-card" style={{ padding: 'var(--space-md)' }} onClick={() => navigate('/nyxen')}>
+              <div
+                key={p.id}
+                className="project-card glass-card"
+                style={{ padding: 'var(--space-md)' }}
+                onClick={() => {
+                  const proj = appState.projects.find((pr) => pr.id === p.id);
+                  if (proj) {
+                    dispatch({ type: 'SET_CURRENT_PROJECT', payload: proj });
+                  }
+                  navigate('/nyxen');
+                }}
+              >
                 <div className="project-card__info">
                   <div className="project-card__name">{p.name}</div>
                   <div className="project-card__location">{p.location.substring(0, 50)}...</div>
@@ -211,6 +280,90 @@ export default function DashboardPage() {
           ))}
         </div>
       </GlassCard>
+
+      {/* Add Project Modal */}
+      {showAddProject && (
+        <>
+          <div className="slide-panel__backdrop slide-panel__backdrop--visible" onClick={() => setShowAddProject(false)} />
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            zIndex: 200, width: '100%', maxWidth: 540, maxHeight: '90vh', overflow: 'auto',
+          }}>
+            <div className="glass-card" style={{ padding: 'var(--space-xl)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-xl)' }}>
+                <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+                  <Building2 size={20} style={{ color: 'var(--color-accent-blue)' }} /> New Project
+                </h2>
+                <button onClick={() => setShowAddProject(false)} style={{ color: 'var(--color-text-tertiary)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              {addError && (
+                <div style={{ padding: 'var(--space-sm) var(--space-md)', marginBottom: 'var(--space-md)', background: 'var(--color-accent-red-dim)', border: '1px solid rgba(255,82,82,0.3)', borderRadius: 'var(--radius-md)', color: 'var(--color-accent-red)', fontSize: 'var(--font-size-sm)' }}>
+                  {addError}
+                </div>
+              )}
+
+              <form onSubmit={handleAddProject} className="flex-col" style={{ gap: 'var(--space-md)' }}>
+                <div className="input-group">
+                  <label className="input-label">Project Name *</label>
+                  <input className="input" type="text" placeholder="e.g. Metro Station Phase-2" value={projectForm.name} onChange={e => setProjectForm({ ...projectForm, name: e.target.value })} />
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Description</label>
+                  <input className="input" type="text" placeholder="Brief project description" value={projectForm.description} onChange={e => setProjectForm({ ...projectForm, description: e.target.value })} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
+                  <div className="input-group">
+                    <label className="input-label">Survey Number *</label>
+                    <input className="input" type="text" placeholder="e.g. SY-200/B" value={projectForm.surveyNumber} onChange={e => setProjectForm({ ...projectForm, surveyNumber: e.target.value })} />
+                  </div>
+                  <div className="input-group">
+                    <label className="input-label">Status</label>
+                    <select className="select" value={projectForm.status} onChange={e => setProjectForm({ ...projectForm, status: e.target.value as any })}>
+                      <option value="planning">Planning</option>
+                      <option value="in-progress">In Progress</option>
+                      <option value="on-hold">On Hold</option>
+                    </select>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
+                  <div className="input-group">
+                    <label className="input-label">Contractor *</label>
+                    <input className="input" type="text" placeholder="Contractor name" value={projectForm.contractor} onChange={e => setProjectForm({ ...projectForm, contractor: e.target.value })} />
+                  </div>
+                  <div className="input-group">
+                    <label className="input-label">Engineer *</label>
+                    <input className="input" type="text" placeholder="Engineer name" value={projectForm.engineer} onChange={e => setProjectForm({ ...projectForm, engineer: e.target.value })} />
+                  </div>
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Location Address</label>
+                  <input className="input" type="text" placeholder="e.g. MG Road, Bangalore" value={projectForm.address} onChange={e => setProjectForm({ ...projectForm, address: e.target.value })} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--space-md)' }}>
+                  <div className="input-group">
+                    <label className="input-label">Latitude</label>
+                    <input className="input" type="number" step="any" placeholder="12.9716" value={projectForm.lat} onChange={e => setProjectForm({ ...projectForm, lat: e.target.value })} />
+                  </div>
+                  <div className="input-group">
+                    <label className="input-label">Longitude</label>
+                    <input className="input" type="number" step="any" placeholder="77.5946" value={projectForm.lng} onChange={e => setProjectForm({ ...projectForm, lng: e.target.value })} />
+                  </div>
+                  <div className="input-group">
+                    <label className="input-label">Budget (₹)</label>
+                    <input className="input" type="number" placeholder="5000000" value={projectForm.totalBudget} onChange={e => setProjectForm({ ...projectForm, totalBudget: e.target.value })} />
+                  </div>
+                </div>
+                <button type="submit" className="btn btn-primary btn-lg" disabled={saving} style={{ width: '100%', marginTop: 'var(--space-sm)' }}>
+                  {saving ? <><div className="spinner" /> Creating...</> : <><Plus size={18} /> Create Project</>}
+                </button>
+              </form>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

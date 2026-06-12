@@ -2550,3 +2550,79 @@ h6 { font-size: var(--font-size-md); }
     flex-direction: column;
   }
 }
+
+/* ---------- Print Media Query ---------- */
+@media print {
+  /* Hide navigation sidebar, headers, buttons, and interaction elements */
+  .sidebar,
+  .header,
+  .section-header,
+  .export-group,
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost,
+  .btn-emerald,
+  .quick-actions,
+  .slide-panel__backdrop,
+  .header__hamburger {
+    display: none !important;
+  }
+
+  /* Reset dashboard layout content area */
+  .dashboard-layout__content {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+
+  .dashboard-layout__main {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* Force print to light mode / ink-saving colors */
+  body, 
+  :root,
+  [data-theme="dark"],
+  [data-theme="light"] {
+    background: #ffffff !important;
+    color: #000000 !important;
+    --color-bg-primary: #ffffff !important;
+    --color-text-primary: #000000 !important;
+    --color-text-secondary: #333333 !important;
+    --color-text-tertiary: #666666 !important;
+    --color-border: #cccccc !important;
+  }
+
+  /* Ensure cards display cleanly on paper */
+  .glass-card {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #dddddd !important;
+    box-shadow: none !important;
+    margin-bottom: 20px !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Format tables for print contrast */
+  .table th {
+    background: #eeeeee !important;
+    color: #000000 !important;
+    border-bottom: 2px solid #333333 !important;
+  }
+
+  .table td {
+    border-bottom: 1px solid #eeeeee !important;
+    color: #000000 !important;
+  }
+
+  .table tfoot td {
+    background: #f5f5f5 !important;
+    border-top: 2px solid #333333 !important;
+  }
+
+  /* Break grids into vertical stack for paper layout compatibility */
+  .grid-2, .grid-3, .grid-4 {
+    display: block !important;
+  }
+}

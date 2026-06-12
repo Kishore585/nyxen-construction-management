@@ -6,6 +6,7 @@ import {
   FileSearch,
   BookOpen,
   Shield,
+  Users,
   LogOut,
   Moon,
   Sun,
@@ -71,6 +72,16 @@ export default function Sidebar() {
               </NavLink>
             );
           })}
+          {state.user?.role === 'Admin' && (
+            <NavLink
+              to="/users"
+              className={`sidebar__nav-item ${location.pathname === '/users' ? 'sidebar__nav-item--active' : ''}`}
+              onClick={closeSidebar}
+            >
+              <Users size={20} className="sidebar__nav-icon" />
+              User Management
+            </NavLink>
+          )}
         </nav>
 
         <div className="sidebar__footer">
@@ -79,8 +90,8 @@ export default function Sidebar() {
               {state.user?.name?.charAt(0) || 'R'}
             </div>
             <div style={{ flex: 1 }}>
-              <div className="sidebar__user-name">{state.user?.name || 'Rajesh Kumar'}</div>
-              <div className="sidebar__user-role">{state.user?.role || 'Senior Auditor'}</div>
+              <div className="sidebar__user-name">{state.user?.name || 'User'}</div>
+              <div className="sidebar__user-role">{state.user?.role || '—'}</div>
             </div>
             <button
               onClick={logout}

@@ -121,4 +121,95 @@ router.post('/login', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/auth/users
+ * Admin-only: list all users (without password hashes)
+ */
+router.get('/users', async (req: Request, res: Response) => {
+  try {
+    // Verify admin via token (simple header check)
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({ message: 'Authentication required' });
+      return;
+    }
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, ENV.JWT_SECRET) as any;
+    if (decoded.role !== 'Admin') {
+      res.status(403).json({ message: 'Admin access required' });
+      return;
+    }
+
+    const users = await UserModel.find().lean();
+    const sanitized = users.map(u => ({
+      id: u.id,
+      username: u.username,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+    }));
+    res.json(sanitized);
+  } catch (error) {
+    console.error('List users error:', error);
+    res.status(500).json({ message: 'Failed to list users' });
+  }
+});
+
+/**
+ * POST /api/auth/register
+ * Admin-only: create a new user
+ * Body: { username, password, name, email, role }
+ */
+router.post('/register', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({ message: 'Authentication required' });
+      return;
+    }
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, ENV.JWT_SECRET) as any;
+    if (decoded.role !== 'Admin') {
+      res.status(403).json({ message: 'Admin access required' });
+      return;
+    }
+
+    const { username, password, name, email, role } = req.body;
+
+    if (!username || !password || !name || !email || !role) {
+      res.status(400).json({ message: 'All fields are required: username, password, name, email, role' });
+      return;
+    }
+
+    // Check uniqueness
+    const existing = await UserModel.findOne({ username }).lean();
+    if (existing) {
+      res.status(409).json({ message: 'Username already exists' });
+      return;
+    }
+
+    const userCount = await UserModel.countDocuments();
+    const newUser = new UserModel({
+      id: `user-${String(userCount + 1).padStart(3, '0')}`,
+      username,
+      passwordHash: bcrypt.hashSync(password, 10),
+      name,
+      email,
+      role,
+    });
+    await newUser.save();
+
+    res.status(201).json({
+      id: newUser.id,
+      username: newUser.username,
+      name: newUser.name,
+      email: newUser.email,
+      role: newUser.role,
+    });
+  } catch (error) {
+    console.error('Register error:', error);
+    res.status(500).json({ message: 'Failed to create user' });
+  }
+});
+
 export default router;

@@ -209,6 +209,42 @@ export default function LandingPage() {
           </button>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer style={{
+        padding: 'var(--space-2xl) var(--space-3xl)',
+        borderTop: '1px solid rgba(255,255,255,0.06)',
+        background: 'rgba(0,0,0,0.2)',
+      }}>
+        <div style={{
+          maxWidth: '1200px', margin: '0 auto',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          flexWrap: 'wrap', gap: 'var(--space-lg)',
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', marginBottom: 'var(--space-sm)' }}>
+              <Building2 size={18} style={{ color: 'var(--color-accent-blue)' }} />
+              <span style={{ fontWeight: 700, fontSize: 'var(--font-size-base)' }}>Nyxen AI</span>
+            </div>
+            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>
+              © 2026 NYXen Team. AI-Powered Construction Verification.
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
+            {['React', 'TypeScript', 'Express', 'MongoDB', 'Gemini AI'].map(tech => (
+              <span key={tech} style={{
+                padding: '4px 10px', borderRadius: 'var(--radius-full)',
+                fontSize: 'var(--font-size-xs)', fontWeight: 500,
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: 'var(--color-text-tertiary)',
+              }}>
+                {tech}
+              </span>
+            ))}
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

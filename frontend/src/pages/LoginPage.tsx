@@ -112,12 +112,8 @@ export default function LoginPage() {
         </form>
 
         <div className="login-card__hint" style={{ marginTop: 'var(--space-lg)' }}>
-          <div style={{ fontWeight: 600, marginBottom: '6px' }}>Demo Credentials</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: 'var(--font-size-xs)' }}>
-            <span><strong>admin</strong> / admin123 — <em>Full access</em></span>
-            <span><strong>jrengineer</strong> / jre123 — <em>Edit Nyxen, no audit</em></span>
-            <span><strong>supervisor</strong> / super123 — <em>Remarks only</em></span>
-            <span><strong>auditor</strong> / audit123 — <em>Read-only</em></span>
+          <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', textAlign: 'center' }}>
+            Authorized personnel only. Contact your administrator for access.
           </div>
         </div>
       </div>

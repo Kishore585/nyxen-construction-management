@@ -47,7 +47,7 @@ interface AnalysisResult {
 type Stage = 'upload' | 'uploading' | 'analyzing' | 'complete';
 
 export default function AnalysisPage() {
-  const { state: appState } = useApp();
+  const { state: appState, dispatch } = useApp();
   const [files, setFiles] = useState<File[]>([]);
   const [stage, setStage] = useState<Stage>('upload');
   const [results, setResults] = useState<AnalysisResult[]>([]);
@@ -59,11 +59,17 @@ export default function AnalysisPage() {
   useEffect(() => {
     api.getProjects().then((data) => {
       setProjects(data);
-      if (data.length > 0) {
+      if (data.length > 0 && !selectedProject) {
         setSelectedProject(data[0].id);
       }
     }).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    if (appState.currentProject) {
+      setSelectedProject(appState.currentProject.id);
+    }
+  }, [appState.currentProject]);
 
   const userRole = appState.user?.role?.toLowerCase() || '';
   const canUpload = ['admin', 'engineer', 'jr. engineer'].includes(userRole);
@@ -112,7 +118,7 @@ export default function AnalysisPage() {
       setResults(analysisResult.results || []);
       setStage('complete');
     } catch (err: any) {
-      setError(err.message || 'Demo analysis failed');
+      setError(err.message || 'Analysis failed');
       setStage('upload');
     }
   };
@@ -188,7 +194,13 @@ export default function AnalysisPage() {
                   <select 
                     className="select" 
                     value={selectedProject} 
-                    onChange={(e) => setSelectedProject(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedProject(e.target.value);
+                      const proj = appState.projects.find((p) => p.id === e.target.value);
+                      if (proj) {
+                        dispatch({ type: 'SET_CURRENT_PROJECT', payload: proj });
+                      }
+                    }}
                     style={{ width: '100%' }}
                   >
                     {projects.map((p) => (
@@ -230,20 +242,20 @@ export default function AnalysisPage() {
               fontSize: 'var(--font-size-sm)',
               textAlign: 'center',
             }}>
-              🔒 <strong>{appState.user?.role}</strong> role cannot upload images — you can view results using demo presets below
+              🔒 <strong>{appState.user?.role}</strong> role cannot upload images — you can view results using sample scenarios below
             </div>
           )}
 
-          {/* Try with Demo Presets */}
+          {/* Quick Analysis Templates */}
           <div style={{ marginTop: 'var(--space-2xl)', paddingTop: 'var(--space-xl)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
             <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-md)', fontWeight: 600 }}>
-              {canUpload ? 'Or Try with Demo Presets' : 'View Demo Analysis Results'}
+              {canUpload ? 'Or Try Sample Scenarios' : 'View Sample Analysis Results'}
             </div>
             <div className="grid-3" style={{ gap: 'var(--space-md)' }}>
               {[
-                { id: 'demo-foundation', title: 'Foundation Stage', desc: 'Simulates foundation earthwork, trenches, rebar, M-25 concrete.' },
-                { id: 'demo-framework', title: 'Structural Frame', desc: 'Simulates columns, beams, M-30 concrete framework.' },
-                { id: 'demo-masonry', title: 'Masonry Work', desc: 'Simulates wall brickwork, Teak wood door frames, UPVC windows.' },
+                { id: 'demo-foundation', title: 'Foundation Stage', desc: 'Earthwork, trenches, rebar, and M-25 concrete analysis.' },
+                { id: 'demo-framework', title: 'Structural Frame', desc: 'Columns, beams, and M-30 concrete framework analysis.' },
+                { id: 'demo-masonry', title: 'Masonry Work', desc: 'Wall brickwork, Teak wood door frames, and UPVC window analysis.' },
               ].map((preset) => (
                 <button
                   key={preset.id}

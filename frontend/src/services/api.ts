@@ -114,4 +114,29 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/dashboard/stats`, { headers: getAuthHeaders() });
     return handleResponse<any>(res);
   },
+
+  // Create Project
+  async createProject(data: any) {
+    const res = await fetch(`${API_BASE_URL}/projects`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<any>(res);
+  },
+
+  // User Management (Admin)
+  async getUsers() {
+    const res = await fetch(`${API_BASE_URL}/auth/users`, { headers: getAuthHeaders() });
+    return handleResponse<any[]>(res);
+  },
+
+  async registerUser(data: { username: string; password: string; name: string; email: string; role: string }) {
+    const res = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<any>(res);
+  },
 };

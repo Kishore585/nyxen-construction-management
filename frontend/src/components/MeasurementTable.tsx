@@ -199,7 +199,7 @@ export default function MeasurementTable({
                 {m.aiQuantity ? m.aiQuantity.toFixed(2) : '—'}
               </td>
               <td className="measurement-value">
-                {editable ? (
+                {canEditDimensions ? (
                   <input
                     className="input"
                     type="number"
@@ -299,12 +299,13 @@ export default function MeasurementTable({
         </tbody>
         <tfoot>
           <tr>
-            <td colSpan={7} style={{ textAlign: 'right' }}>Total</td>
-            <td className="measurement-value">{totalQuantity.toFixed(2)}</td>
+            <td colSpan={9} style={{ textAlign: 'right' }}>Total</td>
+            <td className="measurement-value" style={{ fontWeight: 600 }}>{totalQuantity.toFixed(2)}</td>
+            <td></td>
             <td></td>
             {measurements.some(m => m.rate) && <td></td>}
             {measurements.some(m => m.amount) && (
-              <td className="measurement-value" style={{ color: 'var(--color-accent-emerald)' }}>
+              <td className="measurement-value" style={{ color: 'var(--color-accent-emerald)', fontWeight: 600 }}>
                 ₹{totalAmount.toLocaleString('en-IN')}
               </td>
             )}

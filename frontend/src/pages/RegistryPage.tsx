@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Polygon, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import GlassCard from '../components/GlassCard';
 import { api } from '../services/api';
+import { useApp } from '../store/appStore';
 
 interface RegistryResult {
   surveyNumber: string; state: string; district: string; taluk: string; village: string;
@@ -34,6 +35,7 @@ function FitBounds({ polygon }: { polygon: [number, number][] }) {
 }
 
 export default function RegistryPage() {
+  const { state: appState } = useApp();
   const [surveyNumber, setSurveyNumber] = useState('');
   const [district, setDistrict] = useState('');
   const [state, setState] = useState('');
@@ -41,6 +43,16 @@ export default function RegistryPage() {
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showMapFor, setShowMapFor] = useState<string | null>(null);
+
+  const loadActiveProjectRegistry = () => {
+    if (appState.currentProject) {
+      setSurveyNumber(appState.currentProject.surveyNumber || '');
+    }
+  };
+
+  useEffect(() => {
+    loadActiveProjectRegistry();
+  }, [appState.currentProject]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,7 +124,17 @@ export default function RegistryPage() {
           </button>
         </form>
 
-        <div style={{ marginTop: 'var(--space-lg)', display: 'flex', flexWrap: 'wrap', gap: 'var(--space-sm)' }}>
+        <div style={{ marginTop: 'var(--space-lg)', display: 'flex', flexWrap: 'wrap', gap: 'var(--space-sm)', alignItems: 'center' }}>
+          {appState.currentProject && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={loadActiveProjectRegistry}
+              style={{ fontSize: 'var(--font-size-xs)', border: '1px dashed rgba(255,255,255,0.15)' }}
+            >
+              Autofill Active Project ({appState.currentProject.surveyNumber})
+            </button>
+          )}
           {quickSearches.map((q) => (
             <button key={q.value} className="btn btn-ghost btn-sm" onClick={() => setSurveyNumber(q.value)} style={{ fontSize: 'var(--font-size-xs)' }}>
               {q.label}

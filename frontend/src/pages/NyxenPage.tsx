@@ -35,7 +35,7 @@ interface NyxenData {
 }
 
 export default function NyxenPage() {
-  const { state: appState } = useApp();
+  const { state: appState, dispatch } = useApp();
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [selectedProject, setSelectedProject] = useState('');
   const [nyxenData, setNyxenData] = useState<NyxenData | null>(null);
@@ -97,11 +97,17 @@ export default function NyxenPage() {
   useEffect(() => {
     api.getProjects().then((data) => {
       setProjects(data.map((p: any) => ({ id: p.id, name: p.name })));
-      if (data.length > 0) {
+      if (data.length > 0 && !selectedProject) {
         setSelectedProject(data[0].id);
       }
     }).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    if (appState.currentProject) {
+      setSelectedProject(appState.currentProject.id);
+    }
+  }, [appState.currentProject]);
 
   useEffect(() => {
     if (!selectedProject) return;
@@ -160,7 +166,17 @@ export default function NyxenPage() {
       <div className="section-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
           <div className="input-group" style={{ minWidth: '300px' }}>
-            <select className="select" value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)}>
+            <select
+              className="select"
+              value={selectedProject}
+              onChange={(e) => {
+                setSelectedProject(e.target.value);
+                const proj = appState.projects.find((p) => p.id === e.target.value);
+                if (proj) {
+                  dispatch({ type: 'SET_CURRENT_PROJECT', payload: proj });
+                }
+              }}
+            >
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}

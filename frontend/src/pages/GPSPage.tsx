@@ -6,6 +6,7 @@ import L from 'leaflet';
 import GlassCard from '../components/GlassCard';
 import ConfidenceGauge from '../components/ConfidenceGauge';
 import { api } from '../services/api';
+import { useApp } from '../store/appStore';
 
 // Fix default marker icon issue with bundlers
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -33,12 +34,25 @@ interface GPSResult {
 }
 
 export default function GPSPage() {
+  const { state: appState } = useApp();
   const [lat, setLat] = useState('12.9250');
   const [lng, setLng] = useState('77.5838');
   const [surveyNumber, setSurveyNumber] = useState('SY-45/1');
   const [result, setResult] = useState<GPSResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const loadActiveProjectGPS = () => {
+    if (appState.currentProject) {
+      setLat(appState.currentProject.location.lat.toString());
+      setLng(appState.currentProject.location.lng.toString());
+      setSurveyNumber(appState.currentProject.surveyNumber || '');
+    }
+  };
+
+  useEffect(() => {
+    loadActiveProjectGPS();
+  }, [appState.currentProject]);
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,6 +102,16 @@ export default function GPSPage() {
             <button type="submit" className="btn btn-emerald" disabled={loading} style={{ width: '100%' }}>
               {loading ? <><div className="spinner" /> Verifying...</> : <><Search size={18} /> Verify Coordinates</>}
             </button>
+            {appState.currentProject && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={loadActiveProjectGPS}
+                style={{ width: '100%', marginTop: 'var(--space-sm)', fontSize: 'var(--font-size-xs)' }}
+              >
+                Autofill from Active Project ({appState.currentProject.name})
+              </button>
+            )}
           </form>
 
           {/* Quick Presets */}

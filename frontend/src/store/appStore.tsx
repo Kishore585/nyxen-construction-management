@@ -12,12 +12,35 @@ export interface User {
 export interface Project {
   id: string;
   name: string;
-  location: string;
-  state: string;
+  description?: string;
+  surveyNumber: string;
+  location: {
+    lat: number;
+    lng: number;
+    address: string;
+  };
+  contractor: string;
+  contractorDetails?: {
+    licenseNumber: string;
+    contactPerson: string;
+    phone: string;
+  };
+  agreement?: {
+    agreementNumber: string;
+    dateOfAgreement: string;
+    approvedMaterials: string[];
+    blueprintDimensions: Record<string, number>;
+  };
+  engineer: string;
+  status: 'planning' | 'in-progress' | 'completed' | 'on-hold';
+  startDate: string;
+  expectedCompletion: string;
+  totalBudget: number;
   progress: number;
   complianceScore: number;
-  lastActivity: string;
-  status: 'active' | 'completed' | 'pending';
+  lastActivity?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AnalysisResult {

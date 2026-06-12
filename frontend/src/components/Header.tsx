@@ -15,6 +15,7 @@ const pageTitles: Record<string, { title: string; subtitle: string }> = {
   '/registry': { title: 'Land Registry', subtitle: 'Cross-reference land records and surveys' },
   '/nyxen': { title: 'Nyxen Generator', subtitle: 'Measurement book generation and management' },
   '/audit': { title: 'Audit Reports', subtitle: 'Compliance audit and verification reports' },
+  '/users': { title: 'User Management', subtitle: 'Manage team members and access roles' },
 };
 
 interface SearchResult {
@@ -66,21 +67,45 @@ export default function Header() {
   const { state, dispatch } = useApp();
   const pageInfo = pageTitles[location.pathname] || { title: 'Nyxen', subtitle: '' };
 
+  // Load projects if authenticated and not loaded yet
+  useEffect(() => {
+    if (state.isAuthenticated && state.projects.length === 0) {
+      api.getProjects()
+        .then((data) => {
+          dispatch({ type: 'SET_PROJECTS', payload: data });
+          if (data.length > 0 && !state.currentProject) {
+            dispatch({ type: 'SET_CURRENT_PROJECT', payload: data[0] });
+          }
+        })
+        .catch(console.error);
+    }
+  }, [state.isAuthenticated, state.projects.length, state.currentProject, dispatch]);
+
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Close dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
         setIsOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setShowUserMenu(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setShowNotifications(false);
       }
     };
     document.addEventListener('mousedown', handler);
@@ -188,6 +213,12 @@ export default function Header() {
   const handleSelect = (result: SearchResult) => {
     setIsOpen(false);
     setQuery('');
+    if (result.type === 'project') {
+      const proj = state.projects.find(p => p.id === result.id);
+      if (proj) {
+        dispatch({ type: 'SET_CURRENT_PROJECT', payload: proj });
+      }
+    }
     navigate(result.path);
   };
 
@@ -249,6 +280,35 @@ export default function Header() {
           <h1 className="header__title">{pageInfo.title}</h1>
           <p className="header__subtitle">{pageInfo.subtitle}</p>
         </div>
+
+        {state.isAuthenticated && state.projects.length > 0 && (
+          <div style={{ marginLeft: 'var(--space-xl)', minWidth: '220px' }}>
+            <select
+              className="select"
+              style={{
+                padding: '6px 36px 6px 12px',
+                fontSize: 'var(--font-size-sm)',
+                height: '36px',
+                backgroundPosition: 'right 8px center',
+                borderColor: 'var(--color-border)',
+              }}
+              value={state.currentProject?.id || ''}
+              onChange={(e) => {
+                const proj = state.projects.find(p => p.id === e.target.value);
+                if (proj) {
+                  dispatch({ type: 'SET_CURRENT_PROJECT', payload: proj });
+                }
+              }}
+            >
+              <option value="" disabled>Select project...</option>
+              {state.projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="header__right">
@@ -337,20 +397,76 @@ export default function Header() {
           )}
         </div>
 
-        <div className="header__notification">
-          <Bell size={20} />
-          <span className="header__notification-dot" />
+        <div className="header__notification" ref={notifRef} style={{ position: 'relative' }}>
+          <button
+            onClick={() => { setShowNotifications(!showNotifications); setShowUserMenu(false); }}
+            style={{ color: 'var(--color-text-secondary)', background: 'none', border: 'none', cursor: 'pointer', position: 'relative' }}
+          >
+            <Bell size={20} />
+            <span className="header__notification-dot" />
+          </button>
+
+          {showNotifications && (
+            <div style={{
+              position: 'absolute', top: '100%', right: 0, marginTop: '8px',
+              width: 280, background: 'var(--color-surface-elevated)',
+              border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 100,
+              overflow: 'hidden',
+            }}>
+              <div style={{ padding: 'var(--space-md) var(--space-lg)', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>
+                Notifications
+              </div>
+              <div style={{ padding: 'var(--space-xl)', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)' }}>
+                <Bell size={24} style={{ opacity: 0.3, margin: '0 auto var(--space-sm)' }} />
+                <div>No new notifications</div>
+              </div>
+            </div>
+          )}
         </div>
 
-        <button className="header__user-btn">
-          <div className="header__user-avatar">
-            {state.user?.name?.charAt(0) || 'R'}
-          </div>
-          <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 500 }}>
-            {state.user?.name?.split(' ')[0] || 'Rajesh'}
-          </span>
-          <ChevronDown size={14} style={{ color: 'var(--color-text-tertiary)' }} />
-        </button>
+        <div style={{ position: 'relative' }} ref={userMenuRef}>
+          <button
+            className="header__user-btn"
+            onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifications(false); }}
+          >
+            <div className="header__user-avatar">
+              {state.user?.name?.charAt(0) || 'U'}
+            </div>
+            <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 500 }}>
+              {state.user?.name?.split(' ')[0] || 'User'}
+            </span>
+            <ChevronDown size={14} style={{ color: 'var(--color-text-tertiary)', transform: showUserMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+          </button>
+
+          {showUserMenu && (
+            <div style={{
+              position: 'absolute', top: '100%', right: 0, marginTop: '8px',
+              width: 220, background: 'var(--color-surface-elevated)',
+              border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 100,
+              overflow: 'hidden',
+            }}>
+              <div style={{ padding: 'var(--space-lg)', borderBottom: '1px solid var(--color-border)' }}>
+                <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>{state.user?.name || 'User'}</div>
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: '2px' }}>{state.user?.role || '—'}</div>
+              </div>
+              <button
+                onClick={() => { setShowUserMenu(false); dispatch({ type: 'LOGOUT' }); navigate('/login'); }}
+                style={{
+                  width: '100%', padding: 'var(--space-md) var(--space-lg)',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--color-accent-red)', fontSize: 'var(--font-size-sm)',
+                  textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,82,82,0.08)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+              >
+                <X size={14} /> Sign Out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

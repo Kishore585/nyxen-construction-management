@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Shield, AlertTriangle, CheckCircle, MapPin, FileSearch, BarChart3, Info } from 'lucide-react';
+import { Shield, AlertTriangle, CheckCircle, MapPin, FileSearch, BarChart3, Info, Printer } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import ConfidenceGauge from '../components/ConfidenceGauge';
 import { api } from '../services/api';
@@ -23,7 +23,7 @@ interface ProjectOption {
 }
 
 export default function AuditPage() {
-  const { state: appState } = useApp();
+  const { state: appState, dispatch } = useApp();
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [selectedProject, setSelectedProject] = useState('');
   const [auditData, setAuditData] = useState<AuditData | null>(null);
@@ -35,9 +35,15 @@ export default function AuditPage() {
   useEffect(() => {
     api.getProjects().then((data) => {
       setProjects(data.map((p: any) => ({ id: p.id, name: p.name })));
-      if (data.length > 0) setSelectedProject(data[0].id);
+      if (data.length > 0 && !selectedProject) setSelectedProject(data[0].id);
     }).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    if (appState.currentProject) {
+      setSelectedProject(appState.currentProject.id);
+    }
+  }, [appState.currentProject]);
 
   const handleGenerate = async () => {
     if (!selectedProject) return;
@@ -69,28 +75,46 @@ export default function AuditPage() {
       {/* Controls */}
       <div className="section-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
-          <select className="select" style={{ minWidth: '300px' }} value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)}>
+          <select
+            className="select"
+            style={{ minWidth: '300px' }}
+            value={selectedProject}
+            onChange={(e) => {
+              setSelectedProject(e.target.value);
+              const proj = appState.projects.find((p) => p.id === e.target.value);
+              if (proj) {
+                dispatch({ type: 'SET_CURRENT_PROJECT', payload: proj });
+              }
+            }}
+          >
             {projects.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
         </div>
-        {canGenerate ? (
-          <button className="btn btn-primary" onClick={handleGenerate} disabled={loading}>
-            {loading ? <><div className="spinner" /> Generating...</> : <><Shield size={18} /> Generate Audit Report</>}
-          </button>
-        ) : (
-          <div style={{
-            padding: 'var(--space-sm) var(--space-md)',
-            background: 'rgba(255, 171, 0, 0.1)',
-            border: '1px solid rgba(255, 171, 0, 0.25)',
-            borderRadius: 'var(--radius-md)',
-            color: 'var(--color-accent-amber)',
-            fontSize: 'var(--font-size-sm)',
-          }}>
-            🔒 Jr. Engineers cannot generate audit reports — contact your Supervisor
-          </div>
-        )}
+        <div style={{ display: 'flex', gap: 'var(--space-md)', alignItems: 'center' }}>
+          {auditData && (
+            <button className="btn btn-secondary" onClick={() => window.print()}>
+              <Printer size={18} /> Print Report
+            </button>
+          )}
+          {canGenerate ? (
+            <button className="btn btn-primary" onClick={handleGenerate} disabled={loading}>
+              {loading ? <><div className="spinner" /> Generating...</> : <><Shield size={18} /> Generate Audit Report</>}
+            </button>
+          ) : (
+            <div style={{
+              padding: 'var(--space-sm) var(--space-md)',
+              background: 'rgba(255, 171, 0, 0.1)',
+              border: '1px solid rgba(255, 171, 0, 0.25)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--color-accent-amber)',
+              fontSize: 'var(--font-size-sm)',
+            }}>
+              🔒 Jr. Engineers cannot generate audit reports — contact your Supervisor
+            </div>
+          )}
+        </div>
       </div>
 
       {loading && (
